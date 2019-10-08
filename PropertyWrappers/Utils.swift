@@ -30,3 +30,22 @@ struct APIManager {
 struct Rating {
     @Clamping(0...5) var value: Double = 0.0
 }
+
+struct User: CustomStringConvertible {
+        
+    @Validate(minLength: 3, maxLength: 20)
+    var firstName: String
+    
+    @Validate(minLength: 3, maxLength: 20)
+    var lastName: String
+    
+    @Validate({ $0 != "admin" })
+    var username: String
+
+    @Validate(regex: "^[a-z]{5,10}$")
+    var password: String
+    
+    var description: String {
+        return "\(firstName), \(lastName), \(username), \(password)"
+    }
+}

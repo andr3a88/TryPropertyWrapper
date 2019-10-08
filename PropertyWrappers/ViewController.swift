@@ -27,5 +27,12 @@ class ViewController: UIViewController {
         var rating = Rating(value: 0.0)
         rating.value = 10.0
         print(rating.value)
+        
+        var user = User()
+        user.firstName = "roger"
+        user.lastName = "last"
+        user.username = "notAdmin"
+        user.password = "abc123456"
+        print(user.description)
     }
 }

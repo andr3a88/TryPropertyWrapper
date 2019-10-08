@@ -93,3 +93,98 @@ struct GET {
         }
     }
 }
+
+@propertyWrapper
+struct Validate<Value> {
+    
+    private var _value: Value?
+    private var _lastValid: Value?
+    
+    fileprivate let _isValid: (Value) -> Bool
+    
+    let asserts: Bool
+    let useLastValid: Bool
+    let message: (Value) -> String
+    
+    init(_ validation: @escaping (Value) -> Bool, asserts: Bool = false, useLastValid: Bool = false, message: @escaping (Value) -> String = { "Invalid - \(String(describing: $0))" }) {
+        self._isValid = validation
+        self.asserts = asserts
+        self.useLastValid = useLastValid
+        self.message = message
+    }
+    
+    var wrappedValue: Value? {
+        get {
+            if !useLastValid {
+                return _value
+            } else {
+                return _value ?? _lastValid
+            }
+        }
+        set {
+            if let newValue = newValue, !_isValid(newValue) {
+                if asserts {
+                    assertionFailure(self.message(newValue))
+                }
+                _value = nil
+            } else {
+                _value = newValue
+                if useLastValid { _lastValid = newValue }
+            }
+        }
+    }
+}
+
+extension Validate where Value: Equatable {
+    init(equals otherValue: Value, asserts: Bool = false) {
+        self.init({ $0 == otherValue }, asserts: asserts, message: { "Error: \($0) not equals to \(otherValue)" })
+    }
+    init(notEquals otherValue: Value, asserts: Bool = false) {
+        self.init({ $0 != otherValue }, asserts: asserts, message: { "Error: \($0) equals to \(otherValue)" })
+    }
+}
+
+extension Validate where Value: Comparable {
+    init(lessThan otherValue: Value, asserts: Bool = false) {
+        self.init({ $0 < otherValue }, asserts: asserts, message: { "Error: \($0) not less than \(otherValue)" })
+    }
+    init(greaterThan otherValue: Value, asserts: Bool = false) {
+        self.init({ $0 > otherValue }, asserts: asserts, message: { "Error: \($0) not greater than \(otherValue)" })
+    }
+}
+
+extension Validate where Value: Collection {
+    init(isEmpty: Bool, asserts: Bool = false) {
+        self.init({ isEmpty && $0.isEmpty }, asserts: asserts, message: { "Error: \($0) is not empty" })
+    }
+}
+
+extension Validate where Value == String {
+    init(regex: String, asserts: Bool = false) {
+        self.init({ $0.range(of: regex, options: .regularExpression) != nil },
+                  asserts: asserts,
+                  message: { "Error: \($0) doesn't match regex: \(regex)" })
+    }
+    init(minLength: UInt = 0, maxLength: UInt = UInt(Int.max), asserts: Bool = false) {
+        self.init({ (minLength...maxLength).contains(UInt($0.count)) },
+                  asserts: asserts,
+                  message: { "Error: \($0) not between \(minLength) and \(maxLength)" })
+    }
+    init(isBlank: Bool, asserts: Bool = false) {
+        self.init({ isBlank && $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty },
+                  asserts: asserts,
+                  message: { "Error: \($0) \(isBlank ? "is not blank" : "is blank")" })
+    }
+}
+
+extension Validate where Value: FixedWidthInteger {
+    init(min: Value = .min, max: Value = .max, asserts: Bool = false) {
+        self.init({ (min...max).contains($0) }, asserts: asserts, message: { "Error: \($0) not between \(min) and \(max)" })
+    }
+}
+
+extension Validate where Value: Numeric & Comparable {
+    init(min: Value, max: Value, asserts: Bool = false) {
+        self.init({ (min...max).contains($0) }, asserts: asserts, message: { "Error: \($0) not between \(min) and \(max)" })
+    }
+}
