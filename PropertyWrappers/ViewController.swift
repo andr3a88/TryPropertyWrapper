@@ -23,5 +23,9 @@ class ViewController: UIViewController {
         APIManager.getCurrentWeather { result in
             print(result)
         }
+        
+        var rating = Rating(value: 0.0)
+        rating.value = 10.0
+        print(rating.value)
     }
 }
